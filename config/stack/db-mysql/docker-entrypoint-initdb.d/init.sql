@@ -1,0 +1,2 @@
+CREATE DATABASE IF NOT EXISTS replays;
+GRANT ALL PRIVILEGES ON replays.* TO 'user'@'%';

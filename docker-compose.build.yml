@@ -1,0 +1,84 @@
+name: pokemon-showdown
+
+services:
+  base:
+    image: pokemon-showdown/base
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/base/Dockerfile
+      additional_contexts:
+        scripts: ${PSIM_DC_HOME:-.}/docker/base/scripts
+      args:
+        PSIM_IMAGE_VARIANT: ${PSIM_IMAGE_VARIANT:-bookworm}
+    restart: "no"
+
+  base-node-18:
+    image: pokemon-showdown/base-node-18
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/node/Dockerfile
+      additional_contexts:
+        base-image: "service:base"
+      args:
+        PSIM_NODE_VERSION: "18.20.8"
+    restart: "no"
+
+  base-node-20:
+    image: pokemon-showdown/base-node-20
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/node/Dockerfile
+      additional_contexts:
+        base-image: "service:base"
+      args:
+        PSIM_NODE_VERSION: "20.19.2"
+    restart: "no"
+
+  base-node-20-php:
+    image: pokemon-showdown/base-node-20
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/node-php/Dockerfile
+      additional_contexts:
+        base-image: "service:base-node-20"
+    restart: "no"
+
+  base-httpd:
+    image: pokemon-showdown/base-httpd
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/httpd/Dockerfile
+      additional_contexts:
+        base-image: "service:base"
+        scripts: ${PSIM_DC_HOME:-.}/docker/httpd/scripts
+    restart: "no"
+
+  server:
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/server/Dockerfile
+      context: ${PSIM_SERVER_SRC:-./services/src/server}
+      additional_contexts:
+        base-image: "service:base-node-${PSIM_SERVER_NODE_VERSION:-18}"
+        scripts: ${PSIM_DC_HOME:-.}/docker/server/scripts
+  
+  login:
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/login/Dockerfile
+      context: ${PSIM_LOGIN_SRC:-./services/src/login}
+      additional_contexts:
+        base-image: "service:base-node-${PSIM_LOGIN_NODE_VERSION:-20}-php"
+        pm2-config: "${PSIM_DC_HOME:-.}/docker/login/pm2-config"
+        scripts: ${PSIM_DC_HOME:-.}/docker/login/scripts
+
+  client-builder:
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/client-builder/Dockerfile
+      context: ${PSIM_CLIENT_SRC:-./services/src/client}
+      additional_contexts:
+        base-image: "service:base-node-${PSIM_CLIENT_NODE_VERSION:-20}-php"
+        scripts: ${PSIM_DC_HOME:-.}/docker/client-builder/scripts
+    restart: "no"
+
+  client:
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/client/Dockerfile
+      context: ${PSIM_CLIENT_SRC:-./services/src/client}
+      additional_contexts:
+        base-image: "service:base-httpd"
+        httpd-config: "${PSIM_DC_HOME:-.}/docker/client/httpd-config"
+        scripts: ${PSIM_DC_HOME:-.}/docker/client/scripts

@@ -1,0 +1,8 @@
+config/*
+!config/.gitkeep
+
+data/*
+!data/.gitkeep
+
+src/*
+!src/.gitkeep

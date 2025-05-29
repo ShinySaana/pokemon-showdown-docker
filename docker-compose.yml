@@ -1,0 +1,193 @@
+name: pokemon-showdown
+
+services:
+  server:
+    image: pokemon-showdown/server
+    volumes:
+      - type: volume
+        source: server-logs
+        target: /app/logs
+
+      - type: volume
+        source: server-databases
+        target: /app/databases
+
+      - type: bind
+        source: ${PSIM_SERVER_CONFIG:-./services/config/server}/config.js
+        target: /app/config/config.js
+        bind:
+          create_host_path: false
+        read_only: true
+    networks:
+      db:
+      showdown:
+    restart: unless-stopped
+
+  client-builder:
+    image: pokemon-showdown/client-builder
+    volumes:
+      - type: volume
+        source: client-lib
+        target: /app/lib
+
+      - type: volume
+        source: client-play
+        target: /app/play.pokemonshowdown.com
+
+      - type: volume
+        source: client-home
+        target: /app/pokemonshowdown.com
+
+      - type: volume
+        source: client-replay
+        target: /app/replay.pokemonshowdown.com
+
+      - type: volume
+        source: client-teams
+        target: /app/teams.pokemonshowdown.com
+
+      - type: volume
+        source: client-caches
+        target: /app/caches
+
+      - type: bind
+        source: ${PSIM_CLIENT_CONFIG:-./services/config/client}/
+        target: /app/config
+        bind:
+          create_host_path: false
+
+  client:
+    image: pokemon-showdown/client
+    environment:
+      DB_USERNAME: user
+      DB_PASSWORD: password
+    volumes_from:
+      - client-builder
+    networks:
+      db:
+      showdown:
+    depends_on:
+      - db-mysql
+    restart: unless-stopped
+
+  login:
+    image: pokemon-showdown/login
+    environment:
+      DB_USERNAME: user
+      DB_PASSWORD: password
+    volumes:
+      - type: bind
+        source: ${PSIM_LOGIN_CONFIG:-./services/config/login}/config.js
+        target: /app/config/config.js
+        bind:
+          create_host_path: false
+        read_only: true
+
+      # Reuses the list of servers from the client
+      - type: bind
+        source: ${PSIM_CLIENT_CONFIG:-./services/config/client}/servers.inc.php
+        target: /app/config/servers.inc.php
+        bind:
+          create_host_path: false
+        read_only: true
+      
+      - type: volume
+        source: login-migrations
+        target: /migrations
+    networks:
+      db:
+      showdown:
+    depends_on:
+      - db-mysql
+    restart: unless-stopped
+
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/nginx.conf
+        target: /etc/nginx/nginx.conf
+        bind:
+          create_host_path: false
+        read_only: true
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/sites
+        target: /etc/nginx/conf.d
+        bind:
+          create_host_path: false
+        read_only: true
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/snippets
+        target: /etc/nginx/snippets
+        bind:
+          create_host_path: false
+        read_only: true
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/ssl
+        target: /etc/nginx/certs
+        bind:
+          create_host_path: false
+        read_only: true
+
+      - type: volume
+        source: nginx-logs
+        target: /var/log/nginx
+    networks:
+      showdown:
+        aliases:
+          - ps.local
+          - play.ps.local
+          - sim.ps.local
+    depends_on:
+      - client
+      - server
+      - login
+    restart: unless-stopped
+
+  db-mysql:
+    image: mysql:lts
+    environment:
+      MYSQL_DATABASE: 'showdown'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+    volumes:
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/db-mysql/docker-entrypoint-initdb.d
+        target: /docker-entrypoint-initdb.d
+        bind:
+          create_host_path: false
+        read_only: true
+
+      - type: volume
+        source: db-data
+        target: /var/lib/mysql
+    networks:
+      db:
+    restart: unless-stopped
+
+volumes:
+  server-logs:
+  server-databases:
+
+  client-lib:
+  client-play:
+  client-home:
+  client-replay:
+  client-teams:
+  client-caches:
+
+  nginx-logs:
+
+  db-data:
+  
+  # Should be done and held by the database,
+  # but what can you
+  login-migrations:
+
+networks:
+  db:
+  showdown:

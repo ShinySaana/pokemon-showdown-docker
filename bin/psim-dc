@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+
+export PATH=$PATH:$(pwd)
+
+if [ ! -z "${PSIM_DC_TRACE+x}" ]; then
+    set -x
+    PSIM_DC_DEBUG=true
+fi
+
+set -u
+set -o pipefail
+
+NEED_ELEVATED_PRIVILEDGES=false
+ELEVATE_PRIVILEDGES="sudo -E"
+DOCKER_EXECUTABLE=
+COMPOSE_EXECUTABLE=
+GIT_EXECUTABLE=
+COMPOSE_IS_CLI_PLUGIN=
+
+CURRENT_SCRIPT_NAME=$(basename "$0")
+INITIAL_DIRECTORY="$(pwd)"
+
+LOG_LEVEL_ERROR=0
+LOG_LEVEL_WARN=1
+LOG_LEVEL_INFO=2
+LOG_LEVEL_DEBUG=3
+LOG_LEVEL_TRACE=4
+
+LOG_LEVEL_NAMES=("ERROR" "WARN" "INFO" "DEBUG" "TRACE")
+LOG_LEVEL_COLORS=(";31" ";33" "" ";34" ";34")
+
+usage() {
+    echo "Usage: $CURRENT_SCRIPT_NAME <all|service1[,service2...]> <subcommand>"
+    exit 1
+}
+
+log() {
+    level_name="${LOG_LEVEL_NAMES[$1]}"
+    level_color="${LOG_LEVEL_COLORS[$1]}"
+    shift
+    echo -e "\033[0${level_color}m[$(date '+%Y-%m-%d %H:%M:%S')][$level_name][$CURRENT_SCRIPT_NAME]" "$@""\033[0m" >&2
+}
+
+debug() {
+    if [ ! -z "${PSIM_DC_DEBUG+x}" ]; then
+        log $LOG_LEVEL_DEBUG "$@"
+    fi
+}
+
+info() {
+    log $LOG_LEVEL_INFO "$@"
+}
+
+error() {
+    log $LOG_LEVEL_ERROR "$@"
+}
+
+ensure_fd3() {
+    if ! { true >&3; } 2>/dev/null; then
+        exec 3>&1
+        __close_fd3__="true"
+    else
+        __close_fd3__="false"
+    fi
+}
+
+cleanup_fd3() {
+    if [[ $__close_fd3__ == "true" ]]; then
+        exec 3>&-
+        unset __close_fd3__
+    fi
+}
+
+_docker() {
+    ensure_fd3
+    if $NEED_ELEVATED_PRIVILEDGES; then
+        $ELEVATE_PRIVILEDGES -- "$DOCKER_EXECUTABLE" "$@" >&3
+    else
+        "$DOCKER_EXECUTABLE" "$@" >&3
+    fi
+    __rc=$?
+    cleanup_fd3
+    return $__rc
+}
+
+_compose() {
+    ensure_fd3
+
+    if $COMPOSE_IS_CLI_PLUGIN; then
+        first_arg="compose"
+    else
+        first_arg=""
+    fi
+
+    if $NEED_ELEVATED_PRIVILEDGES; then
+        $ELEVATE_PRIVILEDGES -- "$COMPOSE_EXECUTABLE" $first_arg "$@" >&3
+    else
+        "$COMPOSE_EXECUTABLE" $first_arg "$@" >&3
+    fi
+
+    __rc=$?
+    cleanup_fd3
+    return $__rc
+}
+
+_git() {
+    ensure_fd3
+    "$GIT_EXECUTABLE" "$@" >&3
+    __rc=$?
+    cleanup_fd3
+    return $__rc
+}
+
+set_psim_dc_paths() {
+    CURRENT_SCRIPT_ABSOLUTE_PATH=$(realpath "$0")
+    CURRENT_SCRIPT_DIR=$(dirname "$CURRENT_SCRIPT_ABSOLUTE_PATH")
+    export PSIM_DC_HOME=$(realpath "$CURRENT_SCRIPT_DIR/../")
+
+    if [ -z "${PSIM_DC_CONFIG+x}" ]; then
+        export PSIM_DC_CONFIG="$PSIM_DC_HOME"/config
+    else
+        debug "Using exported '$PSIM_DC_CONFIG' as psim-dc's config directory."
+    fi
+
+    if [ -z "${PSIM_DC_CONFIG_PROJECTS+x}" ]; then
+        export PSIM_DC_CONFIG_PROJECTS="$PSIM_DC_CONFIG"/projects
+    else
+        debug "Using exported '$PSIM_DC_CONFIG_PROJECTS' as psim-dc's projects config directory."
+    fi
+
+
+    if [ -z "${PSIM_DC_SERVICES_CONFIG+x}" ]; then
+        export PSIM_DC_SERVICES_CONFIG="$PSIM_DC_HOME"/services/config
+    else
+        debug "Using exported '$PSIM_DC_SERVICES_CONFIG' as psim-dc's services config directory."
+    fi
+
+    if [ -z "${PSIM_DC_SERCICES_DATA+x}" ]; then
+        export PSIM_DC_SERCICES_DATA="$PSIM_DC_HOME"/services/data
+    else
+        debug "Using exported '$PSIM_DC_SERCICES_DATA' as psim-dc's services data directory."
+    fi
+
+    if [ -z "${PSIM_DC_SERCICES_SRC+x}" ]; then
+        export PSIM_DC_SERVICES_SRC="$PSIM_DC_HOME"/services/src
+    else
+        debug "Using exported '$PSIM_DC_SERVICES_SRC' as psim-dc's services src directory."
+    fi
+}
+
+check_prerequisites() {
+    check_docker
+    check_compose
+    check_git
+}
+
+
+check_docker() {
+    DOCKER_EXECUTABLE="$(command -v docker)"
+    if [ $? != 0 ]; then
+        error "Could not find command 'docker'. Is it installed?"
+        exit 1
+    fi
+
+    _docker_version_result=$($DOCKER_EXECUTABLE --version 2>&1)
+    if [ $? != 0 ] || echo "$_docker_version_result" | grep -v "Docker version" 2>&1 > /dev/null; then
+        error "'$DOCKER_EXECUTABLE' does not look like a docker client binary. What?"
+        exit 1
+    fi
+
+    debug "Using '$DOCKER_EXECUTABLE' as the client docker binary."
+
+    # Probably not the greatest way of checking for permissions?
+    _docker_ps_result=$($DOCKER_EXECUTABLE ps 2>&1 | head)
+    if echo $_docker_ps_result | grep 'denied' 2>&1 > /dev/null; then
+        debug "Seems like we will need elevated priviledges for using docker."
+        NEED_ELEVATED_PRIVILEDGES=true
+    fi
+}
+
+check_compose() {
+    _docker_compose_plugin_version_result=$($DOCKER_EXECUTABLE compose version 2>/dev/null)
+    if [ $? != 0 ] || echo "$_docker_compose_plugin_version_result" | grep -v "Docker Compose version" 2>&1 > /dev/null; then
+        debug "'$DOCKER_EXECUTABLE compose' does not seem available. Checking for 'docker-compose'."
+        _docker_compose_standalone=$(command -v docker-compose)
+        if [ $? != 0 ]; then
+            error "'$DOCKER_EXECUTABLE compose' does not seem available. Please install Docker Compose. See https://docs.docker.com/compose/install/ or https://docs.docker.com/compose/install/standalone/."
+            exit 1
+        else
+            debug "Standalone compose '$_docker_compose_standalone' seems available."
+            COMPOSE_EXECUTABLE="$_docker_compose_standalone"
+            COMPOSE_IS_CLI_PLUGIN=false
+            check_standalone_compose
+            debug "Using standalone compose '$COMPOSE_EXECUTABLE'."
+        fi
+    else
+        COMPOSE_EXECUTABLE="$DOCKER_EXECUTABLE"
+        COMPOSE_IS_CLI_PLUGIN=true
+        debug "Using CLI plugin compose from '$COMPOSE_EXECUTABLE'."
+    fi
+}
+
+check_standalone_compose() {
+    _docker_compose_standalone_version_result=$($COMPOSE_EXECUTABLE --version 2>/dev/null)
+    if [ $? != 0 ] || echo "$_docker_compose_standalone_version_result" | grep -v "Docker Compose version" 2>&1 > /dev/null; then
+        error "'$COMPOSE_EXECUTABLE' does not look like a docker-compose binary. What?"
+        exit 1
+    fi
+}
+
+check_git() {
+    GIT_EXECUTABLE="$(command -v git)"
+
+    if [ $? != 0 ]; then
+        error "Could not find command 'git'. Is it installed?"
+        exit 1
+    fi
+
+    _git_version_result=$($GIT_EXECUTABLE --version 2>&1)
+    if [ $? != 0 ] || echo "$_git_version_result" | grep -v "git version" 2>&1 > /dev/null; then
+        error "'$GIT_EXECUTABLE' does not look like a git binary. What?"
+        exit 1
+    fi
+
+    debug "Using '$GIT_EXECUTABLE' as the git binary."
+}
+
+# Won't work if there's an `=` in the actual value, and doesn't filter for quotes
+# Probably fine for now?
+get_value_from_config() {
+    service_name=$1
+    key=$2
+    config_file_path="$PSIM_DC_CONFIG_PROJECTS"/"$service_name".ini
+    
+    if [ ! -r "$config_file_path" ]; then
+        error "'$config_file_path' is not readable!"
+        exit 1
+    fi
+
+    pattern="^[[:space:]]*${key}[[:space:]]*=[[:space:]]*"
+    _output=$(grep -E "$pattern" "$config_file_path" | sed -E "s/$pattern//")
+    if [ $? != 0 ]; then
+        echo "null"
+    else
+        echo "$_output"
+    fi
+}
+
+clone_service() {
+    service_name=$1
+    destination=$2
+
+    repo_path="$(get_value_from_config "$service_name" "repo")"
+    if [ $? != 0 ]; then
+        exit 1
+    fi
+
+    branch="$(get_value_from_config "$service_name" "branch")"
+    if [ $? != 0 ]; then
+        exit 1
+    fi
+
+    if [ "$repo_path" == "null" ]; then
+        error "'$service_path' needs either a 'path' or a 'repo' configuration value!"
+    fi
+
+    if [ "$branch" == "null" ]; then
+        branch="master"
+        debug "Using 'master' as default branch for cloning '$repo_path'."
+    fi
+
+    info "Cloning '$repo_path' with branch '$branch' to '$destination'"
+    
+    set -e
+    _git clone --recurse-submodules "$repo_path" "$destination"
+    cd "$destination"
+    pwd
+    _git checkout "$branch" --
+    cd "$INITIAL_DIRECTORY"
+    set +e
+}
+
+ensured_services_on_disk="false"
+get_service_path() {
+    service_name=$1
+
+    service_path=""
+    service_overriden_path="$(get_value_from_config "$service_name" "path")"
+    if [ $? != 0 ]; then
+        exit 1
+    fi
+
+    if [ "$service_overriden_path" == "null" ]; then
+        managed="true"
+        service_path="$PSIM_DC_SERVICES_SRC"/"$service_name"
+    else
+        managed="false"
+        service_path="$service_overriden_path"
+    fi
+
+    if ! $ensured_services_on_disk && [ ! -d "$service_path" ]; then
+        if $managed; then
+            $ensured_services_on_disk || debug "Service '$service_name' is managed by psim-dc."
+            clone_service $service_name $service_path
+        else
+            error "'$service_path' was explicitely requested by service $service_name's config, but that path isn't a directory!"
+            exit 1
+        fi
+    fi
+
+    ensured_services_on_disk="true"
+
+    echo "$service_path"
+}
+
+exec_git_for_service() {
+    service="$1"
+    service_path="$2"
+    shift 2
+
+    info "Service $service:"
+
+    cd "$service_path"
+    _git "$@"
+}
+
+set_compose_vars_for_service() {
+    service="$1"
+    service_path="$2"
+    shift 2
+
+    service_name_uppercase=${service^^}
+
+    export "PSIM_${service_name_uppercase}_SRC"="$service_path"
+    export "PSIM_${service_name_uppercase}_CONFIG"="$PSIM_DC_SERVICES_CONFIG"/"$service"/
+}
+
+ensure_directories_exists_for_service() {
+    service="$1"
+    service_name_uppercase=${service^^}
+
+    dir_to_create="PSIM_${service_name_uppercase}_CONFIG"
+    mkdir -p "${!dir_to_create}"
+}
+
+for_each() {
+    services="$1"
+    to_exec="$2"
+    shift 2
+
+    for service in ${services[@]}; do
+        service_path="$(get_service_path "$service")"
+        if [ $? != 0 ]; then
+            exit 1
+        fi
+
+        "$to_exec" "$service" "$service_path" "$@"
+    done
+}
+
+if [[ "$#" < 2 ]]; then
+    usage
+fi
+
+check_prerequisites
+set_psim_dc_paths
+
+if [ "$1" == "all" ]; then
+    requested_services="$(ls -1 "$PSIM_DC_CONFIG_PROJECTS" | sed 's/\.[^.]*$//')"
+    if [ $? != 0 ]; then
+        error "Could not retrieve list of services from '$PSIM_DC_CONFIG_PROJECTS'"
+        exit 1
+    fi
+else
+    IFS=',' read -r -a requested_services <<< "$1"
+fi
+shift
+
+subcommand="$1"
+shift
+
+# Ensure apps are on disk
+for_each "$requested_services" true
+
+case "$subcommand" in
+    "git")
+        for_each "$requested_services" exec_git_for_service "$@"
+        ;;
+
+    "build")
+        for_each "$requested_services" set_compose_vars_for_service
+        _compose -f "$PSIM_DC_HOME"/docker-compose.yml -f "$PSIM_DC_HOME"/docker-compose.build.yml build "$@"
+        ;;
+
+    "build-config")
+        for_each "$requested_services" set_compose_vars_for_service
+        _compose -f "$PSIM_DC_HOME"/docker-compose.yml -f "$PSIM_DC_HOME"/docker-compose.build.yml config "$@"
+        ;;
+
+    "mkdir")
+        for_each "$requested_services" set_compose_vars_for_service
+        for_each "$requested_services" ensure_directories_exists_for_service
+        ;;
+
+    # "clean")
+    #     for_each "$requested_services" 
+
+    *)
+        for_each "$requested_services" set_compose_vars_for_service
+        _compose -f "$PSIM_DC_HOME"/docker-compose.yml "$subcommand" "$@"
+        ;;
+esac
