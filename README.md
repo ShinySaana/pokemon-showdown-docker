@@ -29,16 +29,25 @@ and it hasn't been a week since I started.
 ## Quick start
 
 ```sh
-# Checkout and build the images
+# Checkout and build the images.
 ./bin/psim-dc all build
 
-# Create directories on the host
+# Create directories on the host.
 ./bin/psim-dc all mkdir
 
+# Generate self-signed SSL certificates.
+./bin/psim-dc all generate-nginx-ssl
+
+# Alternatively, copy your certificates to `./services/config/nginx/ssl/`.
+# The nginx container expects what `certbot` produces.
+# TODO: Allow `export`-ing the path to the certificates.
+
 # Copy the examples config from the images to the host
+# TODO: Absolutely not implemented for now
 ./bin/psim-dc all base-config
 
-# Fill in the config (by default, in `./services/config`)
+# Fill in the config for each service (by default, in `./services/config`).
+# I know that this is just step 2 of drawing an owl. I'll get to that eventually.
 
 # Start a new Pokemon Showdown stack
 ./bin/psim-dc all up -d

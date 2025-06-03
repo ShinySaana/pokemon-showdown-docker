@@ -128,6 +128,12 @@ set_psim_dc_paths() {
         debug "Using exported '$PSIM_DC_CONFIG_PROJECTS' as psim-dc's projects config directory."
     fi
 
+    if [ -z "${PSIM_DC_CONFIG_STACK+x}" ]; then
+        export PSIM_DC_CONFIG_STACK="$PSIM_DC_CONFIG"/stack
+    else
+        debug "Using exported '$PSIM_DC_CONFIG_STACK' as psim-dc's stack config directory."
+    fi
+
 
     if [ -z "${PSIM_DC_SERVICES_CONFIG+x}" ]; then
         export PSIM_DC_SERVICES_CONFIG="$PSIM_DC_HOME"/services/config
@@ -335,12 +341,19 @@ set_compose_vars_for_service() {
     export "PSIM_${service_name_uppercase}_CONFIG"="$PSIM_DC_SERVICES_CONFIG"/"$service"/
 }
 
-ensure_directories_exists_for_service() {
+ensure_directories_exist_for_service() {
     service="$1"
     service_name_uppercase=${service^^}
 
     dir_to_create="PSIM_${service_name_uppercase}_CONFIG"
     mkdir -p "${!dir_to_create}"
+}
+
+ensure_common_directories_exist() {
+    mkdir -p "$PSIM_DC_SERVICES_CONFIG/common/"
+
+    mkdir -p "$PSIM_DC_SERVICES_CONFIG/nginx/"
+    mkdir -p "$PSIM_DC_SERVICES_CONFIG/nginx/ssl"
 }
 
 for_each() {
@@ -399,7 +412,32 @@ case "$subcommand" in
 
     "mkdir")
         for_each "$requested_services" set_compose_vars_for_service
-        for_each "$requested_services" ensure_directories_exists_for_service
+        for_each "$requested_services" ensure_directories_exist_for_service
+        ensure_common_directories_exist
+        ;;
+
+    "generate-nginx-ssl")
+        if [[ "$#" == 0 ]]; then
+            error "Subcommand 'generate-nginx-ssl' requires the root domain as a parameter!"
+            exit 1
+        fi
+        root_domain=$1
+
+        ensure_common_directories_exist
+
+        openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
+            -subj "/OU=pokemon-showdown-docker" \
+            -keyout "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/ca-privkey.pem" \
+            -out "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/chain.pem"
+        openssl req -nodes -newkey rsa:4096 \
+            -subj "/CN=$root_domain" \
+            -keyout "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/privkey.pem" \
+            -out "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/fullchain-req.pem"
+        openssl x509 -req -days 365 \
+            -in "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/fullchain-req.pem" \
+            -CA "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/chain.pem" \
+            -CAkey "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/ca-privkey.pem" \
+            -out "$PSIM_DC_SERVICES_CONFIG/nginx/ssl/fullchain.pem"
         ;;
 
     # "clean")

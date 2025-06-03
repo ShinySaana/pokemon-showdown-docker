@@ -126,7 +126,7 @@ services:
           create_host_path: false
         read_only: true
       - type: bind
-        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/ssl
+        source: ${PSIM_DC_SERVICES_CONFIG-./services/config}/nginx/ssl
         target: /etc/nginx/certs
         bind:
           create_host_path: false
