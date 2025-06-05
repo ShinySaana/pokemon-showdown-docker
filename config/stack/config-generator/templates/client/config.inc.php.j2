@@ -1,0 +1,50 @@
+<?php
+
+mb_internal_encoding('UTF-8');
+
+$routes = json_decode(file_get_contents(__DIR__ . '/routes.json'), true);
+
+$psconfig = [
+
+	'sysops' => {{ sysops }},
+	'autolock_ip' => [],
+
+// password and SID hashing settings
+
+	'password_cost' => 12,
+	'sid_length' => 15,
+	'sid_cost' => 4,
+
+// database
+
+	'server' => '{{ db.showdown.hostname }}',
+	'username' => '{{ db.showdown.username }}',
+	'password' => '{{ db.showdown.password }}',
+	'database' => '{{ db.showdown.database }}',
+	'prefix' => '{{ db.showdown.prefix }}',
+	'charset' => 'utf8',
+
+// routes
+	'routes' => $routes,
+
+// CORS requests
+
+	'cors' => [
+		'/^http:\/\/smogon\.com$/' => 'smogon.com_',
+		'/^http:\/\/www\.smogon\.com$/' => 'www.smogon.com_',
+		'/^http:\/\/logs\.psim\.us$/' => 'logs.psim.us_',
+		'/^http:\/\/logs\.psim\.us:8080$/' => 'logs.psim.us_',
+		'/^http:\/\/[a-z0-9]+\.psim\.us$/' => '',
+		'/^http:\/\/play\.pokemonshowdown\.com$/' => '',
+	],
+
+// key signing for SSO
+
+	'privatekeys' => [
+
+1 => '{{ login.private_key -}}
+',
+
+	]
+
+];

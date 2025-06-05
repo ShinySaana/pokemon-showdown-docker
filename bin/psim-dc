@@ -416,6 +416,22 @@ case "$subcommand" in
         ensure_common_directories_exist
         ;;
 
+    "generate-config")
+        ensure_common_directories_exist
+        for_each "$requested_services" set_compose_vars_for_service
+        _compose -f "$PSIM_DC_HOME"/docker-compose.build.yml -f "$PSIM_DC_HOME"/docker-compose.yml run --rm --build --env-from-file <(env) config-generator ./main.py
+        ;;
+
+    "generate-keypair")
+        ensure_common_directories_exist
+        openssl genrsa \
+            -out "$PSIM_DC_SERVICES_CONFIG/common/login-private.pem" \
+            4096
+        openssl rsa -outform PEM -pubout \
+            -in "$PSIM_DC_SERVICES_CONFIG/common/login-private.pem" \
+            -out "$PSIM_DC_SERVICES_CONFIG/common/login-public.pem"
+        ;;
+
     "generate-nginx-ssl")
         if [[ "$#" == 0 ]]; then
             error "Subcommand 'generate-nginx-ssl' requires the root domain as a parameter!"

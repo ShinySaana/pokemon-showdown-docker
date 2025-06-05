@@ -1,0 +1,63 @@
+# This is an example file containing the necessary configuration values
+# for running a Pokemon Showdown stack through this project.
+# Please copy this file to the same directory as `config.yml` and fill
+# in the values as needed.
+# TODO: allow configurable config.yaml path
+
+# The values defined here should let `psim-dc` generate all
+# the necessary config files for each individual Pokemon Showdown project.
+# The produced files do not aim to be comprehensive; rather, they
+# are meant to be "enough" for a self-sustaining PS stack.
+# Configurtation entries such as custom colors, the list of Showdown servers,
+# or custom ads will not be configured here.
+
+# The end result will be templated from the environment variables of the
+# calling process. Feel free to take advantage of that.
+# Furthermore, root keys starting in `x-` will never be used by this project.
+# Feel free to use those as well.
+
+---
+# Domains used for this specific stack.
+domains:
+    root: "${PSIM_DC_DOMAIN_SUFFIX}"
+    client: "play.${PSIM_DC_DOMAIN_SUFFIX}"
+    sim: "sim.${PSIM_DC_DOMAIN_SUFFIX}"
+    dex: "dex.${PSIM_DC_DOMAIN_SUFFIX}"
+    replays: "replay.${PSIM_DC_DOMAIN_SUFFIX}"
+    teams: "teams.${PSIM_DC_DOMAIN_SUFFIX}"
+    calc: "calc.${PSIM_DC_DOMAIN_SUFFIX}"
+
+# Paths to the keypair used between the login server and the rest of the stack.
+# Can be generated with `psim-dc <> generate-key`.
+# If generating the config files with `psim-dc <> generate-config`,
+# `/config` is mounted from the PSIM_SERVICES_CONFIG env variable.
+# (`./services/config` by defalt).
+
+# Keep the private key private!
+login:
+    private_key_path: /config/common/login-private.pem
+    public_key_path: /config/common/login-public.pem
+
+# Identifications of the `pokemon-showdown` provided by this specific stack.
+sim:
+    id: pokemon-showdown-docker
+    name: pokemon-showdown-docker
+
+# List of users with admin rights.
+sysops: ['saana', 'rei']
+
+# Whether to enable the "sysadmin backdoor".
+backdoor: false
+
+# Databases. Multiple project can connect to the same databases;
+# so their configuration are centralized here.
+# There's most likely no modify these,
+# unless you are hosting your databases somewhere else.
+db:
+    showdown:
+        hostname: db-mysql
+        port: 3306 # TODO: Add support in the client for port
+        database: showdown  
+        username: mysql-user
+        password: mysql-password
+        prefix: mtbb_

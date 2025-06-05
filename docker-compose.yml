@@ -1,6 +1,22 @@
 name: pokemon-showdown
 
 services:
+  config-generator:
+    command: "true"
+    volumes:
+      - type: bind
+        source: ${PSIM_SERVICES_CONFIG:-./services/config}
+        target: /config
+        bind:
+          create_host_path: false
+
+      - type: bind
+        source: ${PSIM_CONFIG_GENERATOR_SRC:-./config/stack}/config.yml
+        target: /app/config.yml
+        bind:
+          create_host_path: false
+        read_only: true
+
   server:
     image: pokemon-showdown/server
     volumes:

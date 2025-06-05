@@ -11,6 +11,14 @@ services:
         PSIM_IMAGE_VARIANT: ${PSIM_IMAGE_VARIANT:-bookworm}
     restart: "no"
 
+  config-generator:
+    image: pokemon-showdown/config-generator
+    build:
+      context: ${PSIM_CONFIG_GENERATOR_SRC:-./config/stack/config-generator}
+      additional_contexts:
+        base-image: "service:base"
+    restart: "no"
+
   base-node-18:
     image: pokemon-showdown/base-node-18
     build:

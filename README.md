@@ -4,27 +4,28 @@ Collection of configuration files for running a Pokemon Showdown stack within Do
 Includes `psim-dc`, a tool help running things.
 
 The "in progress" part of "this project is a work in progress" cannot be understated.
-There is very little use out of this project for now. A bunch of stuff should be redone,
-and it hasn't been a week since I started.
+There is very little use out of this project for now. A bunch of stuff should be redone.
+For now at least; treat this project with little more regards than me rambling into the void.
 
 ## TODO
 
 - Generate config from a single sources
-- Same for the routes
+    - Currently in progress
+    - Architecture of the code doing that needs much more thought than it is currently being given.
+        - Fine for now while I figure things out. 
 - Figure out everything that include the word "database".
-    - The schemas are duplicated accross repositories apparently?
-    - I don't even know what is supposed to be MySQL, PostgreSQL, SQLite, or agnostic, or how much agnostic.
-- Generate the SSL certificate if not provided
-- What to do with `.dockerignore`s
-    - Just wouldn't work as-is in any meaningful capacity without them
-    - They're not checkout out rn
+    - DB are shared
+    - Probably manage their schemas entirely out of the main showdown projects?
+- Checking out `.dockerignore`s directly next to the Dockerfile.
 - Actually manage assets
     - Serves them from play.pokemonshowdown.com for now.
     - I don't like that, for a lot of reasons.
 - Calc server
 - Replays
-- Diff config from upstreams. No idea how.
-- Prevent httpd from internal caching 
+- Diff config from upstreams
+    - Probably diff the templates from config-generator and the various config-examples
+- Prevent httpd from internal caching
+- psbattletools?
 
 ## Quick start
 
@@ -42,12 +43,15 @@ and it hasn't been a week since I started.
 # The nginx container expects what `certbot` produces.
 # TODO: Allow `export`-ing the path to the certificates.
 
-# Copy the examples config from the images to the host
-# TODO: Absolutely not implemented for now
-./bin/psim-dc all base-config
+# Copy `./config/stack/config.example.yml` to `./config/stack/config.yml`.
+# Fill some values with your specific needs.
+
+# Generate config files from 
+# Currently a work in progress
+./bin/psim-dc all generate-config
 
 # Fill in the config for each service (by default, in `./services/config`).
-# I know that this is just step 2 of drawing an owl. I'll get to that eventually.
+# I know that this is just step 2 of drawing an owl. I'm getting to that.
 
 # Start a new Pokemon Showdown stack
 ./bin/psim-dc all up -d
