@@ -1,7 +1,7 @@
 # pokemon-showdown-docker
 
 Collection of configuration files for running a Pokemon Showdown stack within Docker.  
-Includes `psim-dc`, a tool help running things.
+Includes `psim-dc`, an helper utility to setup, configure, and run the stack.
 
 The "in progress" part of "this project is a work in progress" cannot be understated.
 There is very little use out of this project for now. A bunch of stuff should be redone.
@@ -13,10 +13,16 @@ For now at least; treat this project with little more regards than me rambling i
     - Currently in progress
     - Architecture of the code doing that needs much more thought than it is currently being given.
         - Fine for now while I figure things out. 
+- Checkout `.dockerignore`s directly next to the `Dockerfile`s.
 - Figure out everything that include the word "database".
     - DB are shared
     - Probably manage their schemas entirely out of the main showdown projects?
-- Checkout `.dockerignore`s directly next to the `Dockerfile`s.
+- Centralize exported environment variables in some sane manner.
+    - Source an equivalent to `.env`?
+        If this, not `.env` because compose will pick it up
+    - Read `./.env` and explicitely exclude it in `psim-dc`'s compose calls?
+        - If so, ensure calls to compose fail if not called through `psim-dc` and warn the user.
+            - Probably through some manner of error on undefined variable in `docker-compose.yml`
 - Actually manage assets
     - Serves them from play.pokemonshowdown.com for now.
     - I don't like that, for a lot of reasons.

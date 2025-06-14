@@ -106,7 +106,7 @@ services:
         bind:
           create_host_path: false
         read_only: true
-      
+
       - type: volume
         source: login-migrations
         target: /migrations
