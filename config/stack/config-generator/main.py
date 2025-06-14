@@ -55,9 +55,11 @@ def load_files_from_main_config(main_config):
 TEMPLATE_DIR = Path("./templates/wip/")
 def template_all(main_config):
     jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader("./")
+        loader=jinja2.FileSystemLoader("./"),
+        variable_start_string="{=",
+        variable_end_string="=}"
     )
-    for template_path in TEMPLATE_DIR.glob(f"**/*.j2"):
+    for template_path in TEMPLATE_DIR.glob("**/*.j2"):
         template_src = jinja_env.get_template(str(template_path))
 
         template_content = template_src.render(
@@ -65,7 +67,6 @@ def template_all(main_config):
         )
         templated_filename = template_path.with_suffix("").relative_to(TEMPLATE_DIR)    
         print(template_content)
-
 
 main_config_raw = get_main_config_file_raw("./config.yml")
 main_config_rendered = expand_posix_vars(main_config_raw, os.environ)

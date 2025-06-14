@@ -56,7 +56,14 @@ backdoor: false
 db:
     showdown: # Also holds the MySQL part of the replay services
         hostname: db-mysql
-        port: 3306 # TODO: Add support in the client for port
+        port: 3306 # TODO: Add support in client/login for port
         database: showdown  
         username: mysql-user
         password: mysql-password # TODO: change this!
+
+    replays_ng:
+        hostname: db-postgresql
+        port: 5432 # TODO: Add support in the login for port
+        database: replays
+        username: postgresql-user
+        password: postgresql-password

@@ -1,10 +1,10 @@
 <?php
 
 $config_replay_database = [
-	'server' => '{{ db.showdown.hostname }}',
-	'username' => '{{ db.showdown.username }}',
-	'password' => '{{ db.showdown.password }}',
-	'database' => '{{ db.showdown.database }}',
-	'prefix' => 'ps_',
+	'server' => '{= db.showdown.hostname =}',
+	'username' => '{= db.showdown.username =}',
+	'password' => '{= db.showdown.password =}',
+	'database' => '{= db.showdown.database =}',
+	'prefix' => 'ps_', {# ntbb_ or ps_? #}
 	'charset' => 'utf8mb4',
 ];
