@@ -16,15 +16,15 @@ For now at least; treat this project with little more regards than me rambling i
 - Figure out everything that include the word "database".
     - DB are shared
     - Probably manage their schemas entirely out of the main showdown projects?
-- Checking out `.dockerignore`s directly next to the Dockerfile.
+- Checkout `.dockerignore`s directly next to the `Dockerfile`s.
 - Actually manage assets
     - Serves them from play.pokemonshowdown.com for now.
     - I don't like that, for a lot of reasons.
-- Calc server
 - Replays
 - Diff config from upstreams
     - Probably diff the templates from config-generator and the various config-examples
 - Prevent httpd from internal caching
+- Calc server
 - psbattletools?
 
 ## Quick start
@@ -46,12 +46,12 @@ For now at least; treat this project with little more regards than me rambling i
 # Copy `./config/stack/config.example.yml` to `./config/stack/config.yml`.
 # Fill some values with your specific needs.
 
-# Generate config files from 
+# Generate config files from `./config/stack/config.yml`
 # Currently a work in progress
 ./bin/psim-dc all generate-config
 
 # Fill in the config for each service (by default, in `./services/config`).
-# I know that this is just step 2 of drawing an owl. I'm getting to that.
+# I know that this is step 2 of drawing an owl. I'm getting to that.
 
 # Start a new Pokemon Showdown stack
 ./bin/psim-dc all up -d

@@ -1,0 +1,11 @@
+<?php
+
+$PokemonServers = array (
+  '{{ sim.id }}' => 
+  array (
+    'name' => '{{ sim.name | replace("'", "\\'") }}',
+    'id' => '{{ sim.id }}',
+    'server' => '{{ domains.sim }}',
+    'port' => 8000,
+  ),
+);

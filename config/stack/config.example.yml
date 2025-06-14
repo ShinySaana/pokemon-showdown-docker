@@ -41,7 +41,7 @@ login:
 # Identifications of the `pokemon-showdown` provided by this specific stack.
 sim:
     id: pokemon-showdown-docker
-    name: pokemon-showdown-docker
+    name: "${PSIM_DC_DOMAIN_SUFFIX}'s sim server"
 
 # List of users with admin rights.
 sysops: ['saana', 'rei']
@@ -51,13 +51,12 @@ backdoor: false
 
 # Databases. Multiple project can connect to the same databases;
 # so their configuration are centralized here.
-# There's most likely no modify these,
-# unless you are hosting your databases somewhere else.
+# There's most likely little point for you to modify these,
+# unless you are hosting your databases outside of this project.
 db:
-    showdown:
+    showdown: # Also holds the MySQL part of the replay services
         hostname: db-mysql
         port: 3306 # TODO: Add support in the client for port
         database: showdown  
         username: mysql-user
-        password: mysql-password
-        prefix: mtbb_
+        password: mysql-password # TODO: change this!
