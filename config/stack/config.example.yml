@@ -27,14 +27,22 @@ domains:
     teams: "teams.${PSIM_DC_DOMAIN_SUFFIX}"
     calc: "calc.${PSIM_DC_DOMAIN_SUFFIX}"
 
-# Paths to the keypair used between the login server and the rest of the stack.
-# Can be generated with `psim-dc <> generate-key`.
-# If generating the config files with `psim-dc <> generate-config`,
-# `/config` is mounted from the PSIM_SERVICES_CONFIG env variable.
-# (`./services/config` by defalt).
+# The login server, and other services, need a pair of 
+# assymetric cryptographic keys to function, and to function securely.
+# They can be generated with `psim-dc <> generate-key`.
 
-# Keep the private key private!
+# They will be loaded by the config generator. Do not put the keys themselves here!
+# By default, `services/config` is mounted to `/config`.
+# `psim-dc <> generate-key` will generate them in the correct location.
+
+# If generating keys with `psim-dc <> generate-key`, keep `key_algorithm` as is.
+# Otherwise, refer to this documentation for more information:
+# https://nodejs.org/api/crypto.html#cryptocreateverifyalgorithm-options
+
+# And most of all: keep the private key private! Do not commit it or disclose it, ever!
 login:
+    key_algorithm: RSA-SHA1
+    key_id: 1
     private_key_path: /config/common/login-private.pem
     public_key_path: /config/common/login-public.pem
 
@@ -56,14 +64,14 @@ backdoor: false
 db:
     showdown: # Also holds the MySQL part of the replay services
         hostname: db-mysql
-        port: 3306 # TODO: Add support in client/login for port
+        port: 3306 # TODO: Add support in client/login server for db port
         database: showdown  
         username: mysql-user
         password: mysql-password # TODO: change this!
 
     replays_ng:
         hostname: db-postgresql
-        port: 5432 # TODO: Add support in the login for port
+        port: 5432 # TODO: Add support in the login server login for db port
         database: replays
         username: postgresql-user
         password: postgresql-password

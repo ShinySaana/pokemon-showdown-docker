@@ -3,6 +3,7 @@
 import glob
 import io
 import os
+import sys
 
 from collections import defaultdict
 from pathlib import Path
@@ -52,8 +53,8 @@ def load_files_from_main_config(main_config):
                 d[k] = file_content
             recursively_do_on_dict(main_config, main_config_dest, set_value)
 
-TEMPLATE_DIR = Path("./templates/wip/")
-def template_all(main_config):
+TEMPLATE_DIR = Path("./templates/")
+def template_all(main_config, destination: Path):
     jinja_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader("./"),
         variable_start_string="{=",
@@ -65,12 +66,22 @@ def template_all(main_config):
         template_content = template_src.render(
             **main_config
         )
-        templated_filename = template_path.with_suffix("").relative_to(TEMPLATE_DIR)    
+        templated_filename = template_path.with_suffix("").relative_to(TEMPLATE_DIR)
+        print("\u001b[31m{filename}:\u001b[0m".format(filename=templated_filename))
         print(template_content)
+        print()
+        write_templated(destination, templated_filename, template_content)
+
+def write_templated(root: Path, path: Path, content: str):
+    final_path = root / path
+    final_path.parent.mkdir(exist_ok=True)
+    final_path.write_text(content)
+
+destination = Path(sys.argv[1])
 
 main_config_raw = get_main_config_file_raw("./config.yml")
 main_config_rendered = expand_posix_vars(main_config_raw, os.environ)
 main_config = read_main_config_rendered(main_config_rendered)
 load_files_from_main_config(main_config)
 
-template_all(main_config)
+template_all(main_config, destination)

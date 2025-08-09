@@ -395,6 +395,8 @@ shift
 # Ensure apps are on disk
 for_each "$requested_services" true
 
+set -e
+
 case "$subcommand" in
     "git")
         for_each "$requested_services" exec_git_for_service "$@"
@@ -419,7 +421,10 @@ case "$subcommand" in
     "generate-config")
         ensure_common_directories_exist
         for_each "$requested_services" set_compose_vars_for_service
-        _compose -f "$PSIM_DC_HOME"/docker-compose.build.yml -f "$PSIM_DC_HOME"/docker-compose.yml run --rm --build --env-from-file <(env) config-generator ./main.py
+        # No idea if the bug lies in me or buildx, but I have to first build then run;
+        # Can't do it in one go. This sucks because --build is smart enough in many cases.
+        _compose -f "$PSIM_DC_HOME"/docker-compose.yml -f "$PSIM_DC_HOME"/docker-compose.build.yml build config-generator
+        _compose -f "$PSIM_DC_HOME"/docker-compose.build.yml -f "$PSIM_DC_HOME"/docker-compose.yml run --remove-orphans --rm --env-from-file <(env) config-generator ./main.py /config
         ;;
 
     "generate-keypair")
