@@ -41,10 +41,8 @@ $psconfig = [
 // key signing for SSO
 
 	'privatekeys' => [
-
-1 => '{= login.private_key -=}
+		{= login.key_id =} => '{= login.private_key -=}
 ',
-
-	]
+]
 
 ];

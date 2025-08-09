@@ -11,14 +11,6 @@ services:
         PSIM_IMAGE_VARIANT: ${PSIM_IMAGE_VARIANT:-bookworm}
     restart: "no"
 
-  config-generator:
-    image: pokemon-showdown/config-generator
-    build:
-      context: ${PSIM_CONFIG_GENERATOR_SRC:-./config/stack/config-generator}
-      additional_contexts:
-        base-image: "service:base"
-    restart: "no"
-
   base-node-18:
     image: pokemon-showdown/base-node-18
     build:
@@ -56,6 +48,23 @@ services:
         scripts: ${PSIM_DC_HOME:-.}/docker/httpd/scripts
     restart: "no"
 
+  config-helper:
+    image: pokemon-showdown/config-helper
+    build:
+      context: ${PSIM_DC_SRC:-./src}/config-helper
+      additional_contexts:
+        base-image: "service:base"
+    restart: "no"
+
+  # TODO: Migrate DBs to the base image?
+  db-mysql:
+    image: pokemon-showdown/db-mysql
+    build:
+      dockerfile: ${PSIM_DC_HOME:-.}/docker/db-mysql/Dockerfile
+      additional_contexts:
+        initdb: ${PSIM_DC_HOME:-.}/docker/db-mysql/init
+    restart: "no"
+
   server:
     build:
       dockerfile: ${PSIM_DC_HOME:-.}/docker/server/Dockerfile
@@ -63,7 +72,7 @@ services:
       additional_contexts:
         base-image: "service:base-node-${PSIM_SERVER_NODE_VERSION:-18}"
         scripts: ${PSIM_DC_HOME:-.}/docker/server/scripts
-  
+
   login:
     build:
       dockerfile: ${PSIM_DC_HOME:-.}/docker/login/Dockerfile

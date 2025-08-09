@@ -4,7 +4,7 @@ Last Config Sync: Never
 
 Generates Pokemon Showdown configuration files using templates in `./templates` and values in `../config.yml`.
 
-**Each configuration file generated is starting point; review the generated config carefully.**
+**Each configuration file generated is a starting point; review the generated config carefully.**
 
 ---
 

@@ -116,25 +116,32 @@ set_psim_dc_paths() {
     CURRENT_SCRIPT_DIR=$(dirname "$CURRENT_SCRIPT_ABSOLUTE_PATH")
     export PSIM_DC_HOME=$(realpath "$CURRENT_SCRIPT_DIR/../")
 
+    # What belongs to pokemon-showdown-docker
+    if [ -z "${PSIM_DC_SRC+x}" ]; then
+        export PSIM_DC_SRC="$PSIM_DC_HOME"/src
+    else
+        debug "Using exported '$PSIM_DC_SRC' as psim-dc's own src directory."
+    fi
+
     if [ -z "${PSIM_DC_CONFIG+x}" ]; then
         export PSIM_DC_CONFIG="$PSIM_DC_HOME"/config
     else
-        debug "Using exported '$PSIM_DC_CONFIG' as psim-dc's config directory."
+        debug "Using exported '$PSIM_DC_CONFIG' as psim-dc's own config directory."
     fi
 
     if [ -z "${PSIM_DC_CONFIG_PROJECTS+x}" ]; then
         export PSIM_DC_CONFIG_PROJECTS="$PSIM_DC_CONFIG"/projects
     else
-        debug "Using exported '$PSIM_DC_CONFIG_PROJECTS' as psim-dc's projects config directory."
+        debug "Using exported '$PSIM_DC_CONFIG_PROJECTS' as psim-dc's own projects config directory."
     fi
 
     if [ -z "${PSIM_DC_CONFIG_STACK+x}" ]; then
         export PSIM_DC_CONFIG_STACK="$PSIM_DC_CONFIG"/stack
     else
-        debug "Using exported '$PSIM_DC_CONFIG_STACK' as psim-dc's stack config directory."
+        debug "Using exported '$PSIM_DC_CONFIG_STACK' as psim-dc's own stack config directory."
     fi
 
-
+    # What's external to pokemon-showdown-docker
     if [ -z "${PSIM_DC_SERVICES_CONFIG+x}" ]; then
         export PSIM_DC_SERVICES_CONFIG="$PSIM_DC_HOME"/services/config
     else
@@ -237,7 +244,7 @@ get_value_from_config() {
     service_name=$1
     key=$2
     config_file_path="$PSIM_DC_CONFIG_PROJECTS"/"$service_name".ini
-    
+
     if [ ! -r "$config_file_path" ]; then
         error "'$config_file_path' is not readable!"
         exit 1
@@ -276,7 +283,7 @@ clone_service() {
     fi
 
     info "Cloning '$repo_path' with branch '$branch' to '$destination'"
-    
+
     set -e
     _git clone --recurse-submodules "$repo_path" "$destination"
     cd "$destination"
@@ -421,10 +428,10 @@ case "$subcommand" in
     "generate-config")
         ensure_common_directories_exist
         for_each "$requested_services" set_compose_vars_for_service
-        # No idea if the bug lies in me or buildx, but I have to first build then run;
+        # No idea if the bug lies in me or buildx, but I have to first `build` then `run`;
         # Can't do it in one go. This sucks because --build is smart enough in many cases.
-        _compose -f "$PSIM_DC_HOME"/docker-compose.yml -f "$PSIM_DC_HOME"/docker-compose.build.yml build config-generator
-        _compose -f "$PSIM_DC_HOME"/docker-compose.build.yml -f "$PSIM_DC_HOME"/docker-compose.yml run --remove-orphans --rm --env-from-file <(env) config-generator ./main.py /config
+        _compose -f "$PSIM_DC_HOME"/docker-compose.yml -f "$PSIM_DC_HOME"/docker-compose.build.yml build config-helper
+        _compose -f "$PSIM_DC_HOME"/docker-compose.build.yml -f "$PSIM_DC_HOME"/docker-compose.yml run --remove-orphans --rm --env-from-file <(env) config-helper ./generate.py /config
         ;;
 
     "generate-keypair")

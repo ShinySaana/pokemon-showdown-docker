@@ -1,21 +1,23 @@
 name: pokemon-showdown
 
 services:
-  config-generator:
+  config-helper:
     command: "true"
     volumes:
+      # Input
+      - type: bind
+        source: ${PSIM_DC_CONFIG_STACK:-./config/stack}/config.yml
+        target: /app/config.yml
+        bind:
+          create_host_path: false
+        read_only: true
+
+      # Output
       - type: bind
         source: ${PSIM_SERVICES_CONFIG:-./services/config}
         target: /config
         bind:
           create_host_path: false
-
-      - type: bind
-        source: ${PSIM_CONFIG_GENERATOR_SRC:-./config/stack}/config.yml
-        target: /app/config.yml
-        bind:
-          create_host_path: false
-        read_only: true
 
   server:
     image: pokemon-showdown/server
@@ -124,19 +126,19 @@ services:
       - "443:443"
     volumes:
       - type: bind
-        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/nginx.conf
+        source: ${PSIM_DC_SRC-./src}/nginx/nginx.conf
         target: /etc/nginx/nginx.conf
         bind:
           create_host_path: false
         read_only: true
       - type: bind
-        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/sites
+        source: ${PSIM_DC_SRC-./src}/nginx/sites
         target: /etc/nginx/conf.d
         bind:
           create_host_path: false
         read_only: true
       - type: bind
-        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/nginx/snippets
+        source: ${PSIM_DC_SRC-./src}/nginx/snippets
         target: /etc/nginx/snippets
         bind:
           create_host_path: false
@@ -164,20 +166,13 @@ services:
     restart: unless-stopped
 
   db-mysql:
-    image: mysql:lts
+    image: pokemon-showdown/db-mysql
     environment:
       MYSQL_DATABASE: 'showdown'
       MYSQL_USER: 'user'
       MYSQL_PASSWORD: 'password'
       MYSQL_ROOT_PASSWORD: 'password'
     volumes:
-      - type: bind
-        source: ${PSIM_DC_CONFIG_STACK-./config/stack}/db-mysql/docker-entrypoint-initdb.d
-        target: /docker-entrypoint-initdb.d
-        bind:
-          create_host_path: false
-        read_only: true
-
       - type: volume
         source: db-data
         target: /var/lib/mysql
@@ -199,9 +194,9 @@ volumes:
   nginx-logs:
 
   db-data:
-  
+
   # Should be done and held by the database,
-  # but what can you
+  # but what can you do
   login-migrations:
 
 networks:
