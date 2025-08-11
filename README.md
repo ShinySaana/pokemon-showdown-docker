@@ -27,8 +27,6 @@ For now at least; treat this project with little more regards than me rambling i
     - Serves them from play.pokemonshowdown.com for now.
     - I don't like that, for a lot of reasons.
 - Replays
-- Diff config from upstreams
-    - Probably diff the templates from config-generator and the various config-examples
 - Prevent httpd from internal caching
 - Calc server
 - psbattletools?

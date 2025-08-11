@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Intended for development use.
+
+set -u
+set -o pipefail
+
+CURRENT_SCRIPT_ABSOLUTE_PATH=$(realpath "$0")
+CURRENT_SCRIPT_DIR=$(dirname "$CURRENT_SCRIPT_ABSOLUTE_PATH")
+CONFIG_HELPER_DIR=$(realpath "$CURRENT_SCRIPT_DIR"/../src/config-helper)
+
+TEMPLATES="$CONFIG_HELPER_DIR"/templates
+ORIGINALS="$CONFIG_HELPER_DIR"/originals
+
+find $TEMPLATES -type f -printf "%P\0" | while read -d $'\0' filename; do
+    template="$TEMPLATES"/"$filename"
+    original="$ORIGINALS"/"$filename"
+
+    diff_output=$(icdiff \
+        --no-headers \
+        --line-numbers \
+        --report-identical-files \
+        $original \
+        $template
+    )
+
+    printf "\033[0;34m%s:\033[0m\n\n%s\n" "$filename" "$diff_output" | less -R
+done
