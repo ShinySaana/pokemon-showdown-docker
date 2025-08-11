@@ -1,0 +1,22 @@
+# Docker builds should not care about any of these
+/.git
+/.github
+/.vscode
+
+.editorconfig
+.gitignore
+
+**/*.md
+
+# Any development artefact should never end up inside a build
+/node_modules
+/.dist
+/.npm
+/.pm2
+.DS_Store
+
+# User managed, but types are also included in those files
+# Feed in the examples but nothing else
+, so ¯\_(ツ)_/¯ 
+/config
+!/config/*-example.js

@@ -1,0 +1,25 @@
+# Docker builds should not care about any of these
+/.git
+/.github
+/.vscode
+
+.editorconfig
+.gitignore
+/CODEOWNERS
+
+*.psd
+
+# Any development artefact should never end up inside a build
+/node_modules
+/dist
+/.npm
+
+/caches
+!/caches/*.md
+
+# I'm not gonna try and support Desktop, but why not in the future?
+/desktop
+
+# I'm not sure any of these are actually used for building or served by anything
+/graphics-src
+/old-replays

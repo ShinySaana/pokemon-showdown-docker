@@ -13,7 +13,6 @@ For now at least; treat this project with little more regards than me rambling i
     - Currently in progress
     - Architecture of the code doing that needs much more thought than it is currently being given.
         - Fine for now while I figure things out. 
-- Checkout `.dockerignore`s directly next to the `Dockerfile`s.
 - Figure out everything that include the word "database".
     - DB are shared
     - Probably manage their schemas entirely out of the main showdown projects?

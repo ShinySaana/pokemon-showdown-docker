@@ -1,0 +1,42 @@
+# Docker builds should not care about any of these
+/.git
+/.github
+/.vscode
+
+.editorconfig
+.gitattributes
+.gitignore
+.npmignore
+
+/CODEOWNERS
+/Procfile
+/*simulator-doc.txt
+
+**/*.md
+
+.DS_Store
+
+
+# Any development artefact should never end up inside a build
+/node_modules
+/dist
+/.npm
+
+# `./config` is trickier; the next few lines are **strongly** susceptible to bitrot.
+# `.md` files in the subdirectories doubles as `.gitkeep`s; the server expects those subdirectories to already exist.
+# This does mean a rebuild when they're modified, but better than a desync with upstream.
+/config
+!/config/formats.ts
+!/config/hosts.csv
+!/config/proxies.csv
+!/config/config-example.js
+!/config/**/*.md
+
+# `./database` is easier, but the same applies
+/databases
+!/databases/migrations
+!/databases/schemas
+
+# Same as `./config` regarding the `.md` files.
+/logs
+!/logs/**/*.md
